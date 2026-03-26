@@ -1,0 +1,43 @@
+.marquee-container {
+  width: 100%;
+  background-color: #0a0a0a;
+  padding: 0.6rem 0;
+  overflow: hidden;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  position: relative;
+  z-index: 201;
+}
+
+.marquee-content {
+  display: inline-flex;
+  align-items: center;
+  animation: marquee-scroll 30s linear infinite;
+  will-change: transform;
+}
+
+.marquee-content:hover {
+  animation-play-state: paused;
+}
+
+.marquee-text {
+  padding: 0 1.2rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #f5f5f3;
+  font-family: 'Outfit', sans-serif;
+}
+
+.marquee-dot {
+  color: #c9a84c;
+  font-size: 0.45rem;
+  opacity: 0.9;
+}
+
+@keyframes marquee-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-33.333%); }
+}
