@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
-import EditableContent from '../components/EditableContent';
 
 const VALUES = [
   { icon: '◆', title: 'Craft First', body: 'Every stitch is intentional. We partner only with manufacturers who share our obsession for detail and material integrity.' },
@@ -29,7 +28,7 @@ export default function AboutPage() {
             Est. 2020 — Mumbai
           </span>
           <h1 className="fade-in" style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(3rem, 7vw, 6rem)', fontWeight: 700, color: '#fff', lineHeight: 0.95, letterSpacing: '-0.02em', maxWidth: '700px' }}>
-            <EditableContent contentKey="about_hero_title" defaultContent={<>We Build<br />Cult Fashion.</>} />
+            We Build<br />Cult Fashion.
           </h1>
         </div>
       </section>
@@ -41,18 +40,18 @@ export default function AboutPage() {
             <span className="subtitle">The Story</span>
             <div className="gold-rule" />
             <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(2rem, 3.5vw, 3rem)', fontWeight: 600, lineHeight: 1.1, marginBottom: '2rem' }}>
-              <EditableContent contentKey="about_story_title" defaultContent="Born from the intersection of street culture and luxury craft." />
+              Born from the intersection of street culture and luxury craft.
             </h2>
             <div style={{ color: 'var(--color-text-light)', lineHeight: 1.9, marginBottom: '1.5rem', fontSize: '0.95rem' }}>
-                <EditableContent contentKey="about_story_p1" defaultContent="ZNZY began in 2020 out of a single belief: that the most powerful fashion exists at the boundary between worlds. Between streetwear and tailoring. Between tradition and rebellion. Between Mumbai's raw energy and the quiet precision of European craft." />
+                ZNZY began in 2020 out of a single belief: that the most powerful fashion exists at the boundary between worlds. Between streetwear and tailoring. Between tradition and rebellion. Between Mumbai&apos;s raw energy and the quiet precision of European craft.
             </div>
             <div style={{ color: 'var(--color-text-light)', lineHeight: 1.9, fontSize: '0.95rem' }}>
-                <EditableContent contentKey="about_story_p2" defaultContent="Our founder, Zia Nair, started the brand with one hook-up tee and a mission: to create garments that feel like armour. That give the person wearing them a quiet, unshakeable confidence. Every piece we release is designed with that singular intention." />
+                Our founder, Zia Nair, started the brand with one hook-up tee and a mission: to create garments that feel like armour. That give the person wearing them a quiet, unshakeable confidence. Every piece we release is designed with that singular intention.
             </div>
           </div>
           <div style={{ position: 'relative' }}>
             <img
-              src="https://in.pinterest.com/pin/133707488997190709/"
+              src="https://pub-1407f82391df4ab1951418d04be76914.r2.dev/uploads/06e17eeb-57c7-45cc-8710-6c46899d69e8.png"
               alt="ZNZY Founder"
               style={{ width: '100%', aspectRatio: '3/4', objectFit: 'cover', borderRadius: '2px' }}
             />

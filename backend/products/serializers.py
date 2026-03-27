@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Product, ProductImage, ProductVariant, Category, Review, SiteContent
+from .models import Product, ProductImage, ProductVariant, Category, Review
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -51,14 +51,3 @@ class ProductSerializer(serializers.ModelSerializer):
     def get_numReviews(self, obj):
         return len(obj.reviews.all())
 
-class SiteContentSerializer(serializers.ModelSerializer):
-    value = serializers.SerializerMethodField()
-
-    class Meta:
-        model = SiteContent
-        fields = ['key', 'content_type', 'value']
-
-    def get_value(self, obj):
-        if obj.content_type == 'text':
-            return obj.text_value
-        return obj.image_url or (obj.image.url if obj.image else None)

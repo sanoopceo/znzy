@@ -2,7 +2,6 @@ import { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { ArrowRight, Play } from 'lucide-react';
-import EditableContent from '../components/EditableContent';
 
 const COLLECTIONS = [
   {
@@ -56,10 +55,9 @@ export default function HomePage() {
     <div>
       {/* ── HERO ── */}
       <section style={{ position: 'relative', height: '92vh', overflow: 'hidden', display: 'flex', alignItems: 'flex-end' }}>
-        <EditableContent 
-          contentKey="home_hero_image"
-          type="image"
-          defaultContent="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80"
+        <img
+          src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80"
+          alt="Hero"
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
         />
         {/* Dark gradient overlay */}
@@ -69,9 +67,7 @@ export default function HomePage() {
           <span className="fade-in" style={{ display: 'inline-block', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.3em', textTransform: 'uppercase', color: 'var(--color-gold)', marginBottom: '1.2rem' }}>
             Spring / Summer 2026
           </span>
-            <EditableContent 
-              contentKey="home_hero_title"
-              defaultContent={<>Redefine<br />Classic.</>}
+            <h1
               style={{
                 fontFamily: 'var(--font-serif)',
                 fontSize: 'clamp(3.5rem, 9vw, 8rem)',
@@ -82,13 +78,15 @@ export default function HomePage() {
                 marginBottom: '2rem',
                 maxWidth: '700px',
               }}
-            />
-          <EditableContent 
-             contentKey="home_hero_subtitle"
-             defaultContent="A new season of bold minimalism. Crafted for those who move through the world with intent."
+            >
+              Redefine<br />Classic.
+            </h1>
+          <p
              className="fade-in"
              style={{ color: 'rgba(255,255,255,0.75)', fontSize: '1rem', fontWeight: 300, maxWidth: '420px', marginBottom: '2.5rem', lineHeight: 1.7, animationDelay: '0.2s', opacity: 0, animationFillMode: 'forwards' }}
-          />
+          >
+            A new season of bold minimalism. Crafted for those who move through the world with intent.
+          </p>
           <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', animationDelay: '0.4s' }} className="fade-in">
             <Link to="/new-in" className="btn btn-gold">
               Shop New In <ArrowRight size={15} style={{ marginLeft: '0.5rem' }} />
@@ -106,11 +104,11 @@ export default function HomePage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '3rem' }}>
             <div>
               <span className="subtitle">
-                <EditableContent contentKey="home_newin_subtitle" defaultContent="Just Dropped" />
+                Just Dropped
               </span>
               <div className="gold-rule" />
               <h2 className="title" style={{ marginBottom: 0 }}>
-                <EditableContent contentKey="home_newin_title" defaultContent="New In" />
+                New In
               </h2>
             </div>
             <Link to="/new-in" style={{ fontSize: '0.78rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--color-gold)', display: 'flex', alignItems: 'center', gap: '0.4rem', borderBottom: '1px solid var(--color-gold)', paddingBottom: '0.15rem' }}>
@@ -181,10 +179,10 @@ export default function HomePage() {
           <div>
             <span style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.25em', textTransform: 'uppercase', color: 'var(--color-gold)', marginBottom: '1.5rem' }}>Our Identity</span>
             <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(2rem, 4vw, 3.5rem)', fontWeight: 600, lineHeight: 1.05, marginBottom: '2rem', color: 'inherit' }}>
-              <EditableContent contentKey="home_story_title" defaultContent="Born from the intersection of street culture and luxury craft." />
+              Born from the intersection of street culture and luxury craft.
             </h2>
             <div style={{ color: 'rgba(255,255,255,0.6)', lineHeight: 1.9, marginBottom: '2.5rem', fontSize: '0.95rem' }}>
-              <EditableContent contentKey="home_story_text" defaultContent="ZNZY is not a brand. It's a movement. Each piece is designed with a singular intention — to be worn by those who refuse to be invisible. From concept to stitch, every garment carries our obsession with detail, form, and cultural rebellion." />
+              ZNZY is not a brand. It&apos;s a movement. Each piece is designed with a singular intention — to be worn by those who refuse to be invisible. From concept to stitch, every garment carries our obsession with detail, form, and cultural rebellion.
             </div>
             <Link to="/about" className="btn btn-outline-gold">
               Read Our Story <ArrowRight size={14} style={{ marginLeft: '0.5rem' }} />

@@ -3,8 +3,8 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework import status
-from .models import Product, Category, Review, ProductImage, SiteContent
-from .serializers import ProductSerializer, CategorySerializer, ProductImageSerializer, SiteContentSerializer
+from .models import Product, Category, Review, ProductImage
+from .serializers import ProductSerializer, CategorySerializer, ProductImageSerializer
 from django.db.models import Q
 
 @api_view(['GET'])
@@ -129,33 +129,3 @@ def deleteImage(request, pk):
         return Response({'detail': 'Image deleted successfully'})
     except ProductImage.DoesNotExist:
         return Response({'detail': 'Image not found'}, status=status.HTTP_404_NOT_FOUND)
-@api_view(['GET'])
-def getSiteContent(request):
-    content = SiteContent.objects.all()
-    serializer = SiteContentSerializer(content, many=True)
-    return Response(serializer.data)
-
-@api_view(['POST'])
-@permission_classes([IsAdminUser])
-@parser_classes([MultiPartParser, FormParser])
-def updateSiteContent(request):
-    data = request.data
-    key = data.get('key')
-    content_type = data.get('content_type', 'text')
-
-    content, created = SiteContent.objects.get_or_create(key=key)
-    content.content_type = content_type
-
-    if content_type == 'text':
-        content.text_value = data.get('value')
-    else:
-        image = request.FILES.get('image')
-        if image:
-            content.image = image
-            content.image_url = None # Reset URL if file is uploaded
-        elif data.get('value'):
-            content.image_url = data.get('value')
-
-    content.save()
-    serializer = SiteContentSerializer(content, many=False)
-    return Response(serializer.data)

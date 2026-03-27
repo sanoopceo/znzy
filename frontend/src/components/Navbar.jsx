@@ -1,8 +1,7 @@
 import { useContext, useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { StoreContext } from '../context/StoreContext';
-import { AdminContext } from '../context/AdminContext';
-import { ShoppingBag, User, Moon, Sun, Search, X, Menu, ChevronDown, Edit3, CheckCircle } from 'lucide-react';
+import { ShoppingBag, User, Moon, Sun, Search, X, Menu, ChevronDown } from 'lucide-react';
 import axios from 'axios';
 
 const NAV_LINKS = [
@@ -17,7 +16,6 @@ const NAV_LINKS = [
 
 export default function Navbar() {
   const { state, dispatch } = useContext(StoreContext);
-  const { globalEditMode, setGlobalEditMode } = useContext(AdminContext);
   const { cartItems, userInfo, theme } = state;
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -217,25 +215,6 @@ export default function Navbar() {
                 </button>
               </div>
             </div>
-
-            {/* Global Edit Mode Toggle (Admin only) */}
-            {userInfo?.isAdmin && (
-              <button 
-                onClick={() => setGlobalEditMode(!globalEditMode)} 
-                title={globalEditMode ? "Exit Edit Mode" : "Enter Edit Mode"}
-                style={{ 
-                  color: globalEditMode ? 'var(--color-gold)' : 'var(--color-text)', 
-                  display: 'flex', 
-                  alignItems: 'center',
-                  background: globalEditMode ? 'rgba(212,175,55,0.1)' : 'transparent',
-                  padding: '5px',
-                  borderRadius: '4px',
-                  border: globalEditMode ? '1px solid var(--color-gold)' : '1px solid transparent'
-                }}
-              >
-                {globalEditMode ? <CheckCircle size={18} /> : <Edit3 size={18} />}
-              </button>
-            )}
 
             {/* Theme Toggle */}
             <button onClick={toggleTheme} aria-label="Toggle Theme" style={{ color: 'var(--color-text)', display: 'flex', alignItems: 'center' }}>

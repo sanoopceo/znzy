@@ -74,17 +74,3 @@ class Review(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.product.name} - {self.rating} stars"
-
-class SiteContent(models.Model):
-    CONTENT_TYPES = (
-        ('text', 'Text'),
-        ('image', 'Image'),
-    )
-    key = models.CharField(max_length=100, unique=True)
-    content_type = models.CharField(max_length=20, choices=CONTENT_TYPES)
-    text_value = models.TextField(blank=True, null=True)
-    image = models.ImageField(upload_to='site/', blank=True, null=True)
-    image_url = models.URLField(max_length=500, blank=True, null=True)
-
-    def __str__(self):
-        return self.key

@@ -5,13 +5,17 @@ from rest_framework_simplejwt.tokens import RefreshToken
 class UserSerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField(read_only=True)
     isAdmin = serializers.SerializerMethodField(read_only=True)
+    isSuperuser = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'name', 'isAdmin']
+        fields = ['id', 'username', 'email', 'name', 'isAdmin', 'isSuperuser']
 
     def get_isAdmin(self, obj):
         return obj.is_staff
+
+    def get_isSuperuser(self, obj):
+        return obj.is_superuser
 
     def get_name(self, obj):
         name = obj.first_name

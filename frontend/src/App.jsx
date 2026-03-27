@@ -2,6 +2,8 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import MarqueeBanner from './components/MarqueeBanner';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import PageBuilder from './builder/PageBuilder';
+import DynamicPage from './pages/DynamicPage';
 
 // Pages
 import HomePage from './pages/HomePage';
@@ -36,6 +38,8 @@ function App() {
           <Route path="/collections" element={<CollectionsPage />} />
           <Route path="/archive-sale" element={<ArchiveSalePage />} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/admin/page-builder" element={<PageBuilder />} />
+          <Route path="/page/:slug" element={<DynamicPage />} />
         </Routes>
       </main>
       <Footer />
