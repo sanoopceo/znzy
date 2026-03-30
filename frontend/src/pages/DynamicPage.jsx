@@ -4,16 +4,12 @@ import { StoreContext } from '../context/StoreContext';
 import pageService from '../services/pageService';
 import PageRenderer from './PageRenderer';
 
-function toRenderableHtml(contentJson) {
-  if (!contentJson) return '';
-  const pages = contentJson.pages || [];
-  if (pages.length > 0 && pages[0].component) {
-    return pages[0].component;
+function toRenderable(contentJson) {
+  if (!contentJson || typeof contentJson !== 'object') return { html: '', css: '' };
+  if (typeof contentJson.html === 'string' || typeof contentJson.css === 'string') {
+    return { html: contentJson.html || '', css: contentJson.css || '' };
   }
-  if (typeof contentJson.html === 'string') {
-    return contentJson.html;
-  }
-  return '';
+  return { html: '', css: '' };
 }
 
 export default function DynamicPage() {
@@ -47,10 +43,10 @@ export default function DynamicPage() {
   if (loading) return <div className="container" style={{ padding: '3rem 0' }}>Loading page...</div>;
   if (error) return <div className="container" style={{ padding: '3rem 0' }}>{error}</div>;
 
-  const html = toRenderableHtml(page?.content_json);
+  const { html, css } = toRenderable(page?.content_json);
   return (
     <main className="container" style={{ padding: '2rem 0' }}>
-      <PageRenderer html={html} context={{ product: { name: 'Demo Product', price: '99.00' } }} />
+      <PageRenderer html={html} css={css} context={{ product: { name: 'Demo Product', price: '99.00' } }} />
     </main>
   );
 }

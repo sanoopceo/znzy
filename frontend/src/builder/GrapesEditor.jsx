@@ -3,12 +3,13 @@ import grapesjs from 'grapesjs';
 import 'grapesjs/dist/css/grapes.min.css';
 import { registerDefaultBlocks } from './BlockManager';
 
-export default function GrapesEditor({ initialProjectData, onReady }) {
+export default function GrapesEditor({ projectData, onReady }) {
   const editorRef = useRef(null);
   const containerRef = useRef(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
+    if (editorRef.current) return;
 
     const editor = grapesjs.init({
       container: containerRef.current,
@@ -18,13 +19,15 @@ export default function GrapesEditor({ initialProjectData, onReady }) {
       blockManager: { appendTo: '#gjs-blocks' },
       styleManager: { appendTo: '#gjs-styles' },
       traitManager: { appendTo: '#gjs-traits' },
+      assetManager: {
+        upload: '/api/assets/upload/',
+        uploadName: 'files',
+        multiUpload: true,
+        autoAdd: true,
+      },
     });
 
     registerDefaultBlocks(editor);
-
-    if (initialProjectData && Object.keys(initialProjectData).length > 0) {
-      editor.loadProjectData(initialProjectData);
-    }
 
     editorRef.current = editor;
     onReady?.(editor);
@@ -33,7 +36,14 @@ export default function GrapesEditor({ initialProjectData, onReady }) {
       editor.destroy();
       editorRef.current = null;
     };
-  }, [initialProjectData, onReady]);
+  }, [onReady]);
+
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const data = projectData && Object.keys(projectData).length > 0 ? projectData : {};
+    editor.loadProjectData(data);
+  }, [projectData]);
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr 260px', gap: '12px' }}>

@@ -1,4 +1,5 @@
 import { useState, useContext, useEffect, useRef } from 'react';
+import toast from 'react-hot-toast';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { StoreContext } from '../context/StoreContext';
@@ -37,16 +38,23 @@ export default function ProductPage() {
       try {
         const { data } = await axios.get(`/api/products/${id}/`);
         
-        let images = data.images.map(img => ({ id: img.id, url: img.image_url || img.image }));
+        // Build image list from new structure: Main + Sides
+        let images = [];
+        if (data.main_image) {
+            images.push({ id: 'main', url: data.main_image });
+        }
+        if (data.side_images && data.side_images.length > 0) {
+            data.side_images.forEach(img => {
+                images.push({ id: img.id, url: img.image });
+            });
+        }
         
-        // If it's the sample product we want to highlight or if images are missing
-        if (data.name.includes("Juliet") || images.length < 2) {
+        // Fallback for demo if no images exist
+        if (images.length === 0) {
             const fallbackUrls = [
                 '/images/redesign/juliet_front.png',
                 '/images/redesign/juliet_side.png',
-                '/images/redesign/juliet_back.png',
-                '/images/redesign/juliet_walking.png',
-                '/images/redesign/juliet_fabric.png'
+                '/images/redesign/juliet_back.png'
             ];
             images = fallbackUrls.map((url, idx) => ({ id: `fallback-${idx}`, url }));
         }
@@ -54,16 +62,22 @@ export default function ProductPage() {
         const transformedProduct = {
           ...data,
           images: images,
-          price: data.price || 6200, 
-          sizes: data.variants && data.variants.length > 0 ? [...new Set(data.variants.map(v => v.size))] : ['XS', 'S', 'M', 'L', 'XL', '2XL'],
-          colors: data.variants && data.variants.length > 0 ? [...new Set(data.variants.map(v => v.color))] : ['Cherry Red'],
+          // Use computed pricing from backend
+          price: data.discounted_price || data.price,
+          originalPrice: data.original_price,
+          isArchive: data.is_archive_sale,
+          discount: data.discount_percentage,
+          // sizes is now an array of {id, size, stock}
+          sizes: Array.isArray(data.sizes) ? data.sizes : [],
           brand: 'ZNZY LUXE',
-          stockLeft: 5,
         };
         setProduct(transformedProduct);
-        setActiveImage(transformedProduct.images[0].url);
-        setEditData({ name: transformedProduct.name, price: transformedProduct.price, description: transformedProduct.description });
-        if (transformedProduct.colors.length > 0) setSelectedColor(transformedProduct.colors[0]);
+        setActiveImage(transformedProduct.images[0]?.url || '');
+        setEditData({ 
+          name: transformedProduct.name, 
+          price: transformedProduct.originalPrice || transformedProduct.price, 
+          description: transformedProduct.description 
+        });
       } catch (error) {
         console.error("Error fetching product", error);
         // High-fidelity fallback for Juliet Dress
@@ -103,7 +117,7 @@ export default function ProductPage() {
       setProduct({ ...product, name: data.name, price: data.price, description: data.description });
       setIsEditMode(false);
     } catch (error) {
-      alert("Error updating product: " + (error.response?.data?.detail || error.message));
+      toast.error("Error updating product: " + (error.response?.data?.detail || error.message));
     } finally {
       setLoading(false);
     }
@@ -129,8 +143,9 @@ export default function ProductPage() {
       const newImage = { id: data.id, url: data.image_url || data.image };
       setProduct({ ...product, images: [...product.images, newImage] });
       setActiveImage(newImage.url);
+      toast.success('Asset uploaded successfully');
     } catch (error) {
-      alert("Error uploading image: " + (error.response?.data?.detail || error.message));
+      toast.error("Error uploading image: " + (error.response?.data?.detail || error.message));
     } finally {
       setUploading(false);
     }
@@ -138,7 +153,7 @@ export default function ProductPage() {
 
   const deleteImageHandler = async (imgId) => {
     if (imgId.toString().startsWith('fallback')) {
-        alert("Cannot delete fallback images. Please upload new images to replace them.");
+        toast.error("Cannot delete fallback images");
         return;
     }
     if (!window.confirm("Are you sure you want to delete this image?")) return;
@@ -149,8 +164,9 @@ export default function ProductPage() {
       const newImages = product.images.filter(img => img.id !== imgId);
       setProduct({ ...product, images: newImages });
       if (activeImage.includes(imgId)) setActiveImage(newImages[0]?.url || '');
+      toast.success('Asset removed');
     } catch (error) {
-      alert("Error deleting image: " + (error.response?.data?.detail || error.message));
+      toast.error("Error deleting image: " + (error.response?.data?.detail || error.message));
     }
   };
 
@@ -165,11 +181,26 @@ export default function ProductPage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const addToCartHandler = () => {
+  const addToCartHandler = (isBuyNow = false) => {
     if (!selectedSize) {
-      alert('Please select a size before adding to cart.');
+      toast.error('Please select a size before continuing', {
+        icon: '⚠️',
+        duration: 3000,
+        position: 'top-right',
+        style: {
+          borderRadius: '12px',
+          background: '#FFFFFF',
+          color: '#1a1a1a',
+          padding: '16px 24px',
+          boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)',
+          fontWeight: '600',
+          border: '1px solid #f0f0f0'
+        },
+      });
       return;
     }
+
+    const sizeObj = product.sizes.find(s => s.size === selectedSize);
 
     dispatch({
       type: 'CART_ADD_ITEM',
@@ -179,12 +210,16 @@ export default function ProductPage() {
         price: product.price,
         image: activeImage,
         qty: quantity,
-        variantId: `${selectedSize}-${selectedColor}`,
+        variantId: sizeObj ? sizeObj.id : `${selectedSize}`,
         size: selectedSize,
-        color: selectedColor
       }
     });
-    navigate('/cart');
+    
+    if (isBuyNow) {
+        navigate('/checkout');
+    } else {
+        navigate('/cart');
+    }
   };
 
   const openLightbox = (index) => {
@@ -213,6 +248,49 @@ export default function ProductPage() {
     setZoomStyle({ display: 'none' });
   };
 
+  const [reviewData, setReviewData] = useState({ rating: 5, comment: '' });
+  const [submittingReview, setSubmittingReview] = useState(false);
+
+  const submitReviewHandler = async (e) => {
+    e.preventDefault();
+    if (!userInfo) {
+       toast.error("Please login to leave a review");
+       return;
+    }
+    if (!reviewData.comment.trim()) {
+        toast.error("Please write a comment");
+        return;
+    }
+    setSubmittingReview(true);
+    try {
+      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+      const { data: newReview } = await axios.post(`/api/products/${product.id}/reviews/`, reviewData, config);
+      
+      toast.success("Review submitted successfully");
+      
+      // Update UI instantly - prepend the new review to the list
+      const updatedReviews = [newReview, ...(product.reviews || [])];
+      
+      // Update counts and average rating locally for instant feedback
+      const newNumReviews = (product.numReviews || 0) + 1;
+      const newRating = ((product.rating || 0) * (product.numReviews || 0) + parseInt(reviewData.rating)) / newNumReviews;
+
+      setProduct({ 
+        ...product, 
+        reviews: updatedReviews, 
+        rating: newRating, 
+        numReviews: newNumReviews 
+      });
+      
+      // Clear fields
+      setReviewData({ rating: 5, comment: '' });
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Error submitting review");
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
+
   if (loading) return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh', color: 'var(--color-gold)' }}>
       <Loader className="animate-spin" size={48} />
@@ -222,7 +300,7 @@ export default function ProductPage() {
   if (!product) return <div className="container">Product Not Found</div>;
 
   return (
-    <div className="bg-nude" style={{ minHeight: '100vh', transition: 'background-color 0.5s ease' }}>
+    <div className="bg-nude main-page-content" style={{ minHeight: '100vh', transition: 'background-color 0.5s ease' }}>
       
       {/* Lightbox Modal */}
       {isLightboxOpen && (
@@ -231,7 +309,11 @@ export default function ProductPage() {
               <button className="modal-close" onClick={closeLightbox}><Plus style={{ transform: 'rotate(45deg)' }} /></button>
               <div style={{ position: 'relative', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <button className="nav-btn left" onClick={(e) => { e.stopPropagation(); setLightboxIndex((lightboxIndex - 1 + product.images.length) % product.images.length) }}><Plus style={{ transform: 'rotate(-45deg)'}} /></button>
-                  <img src={product.images[lightboxIndex]} alt="" style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
+                  <img 
+                    src={product.images[lightboxIndex]?.url || product.images[lightboxIndex]} 
+                    alt="" 
+                    style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} 
+                  />
                   <button className="nav-btn right" onClick={(e) => { e.stopPropagation(); setLightboxIndex((lightboxIndex + 1) % product.images.length) }}><Plus style={{ transform: 'rotate(135deg)'}} /></button>
               </div>
            </div>
@@ -292,9 +374,14 @@ export default function ProductPage() {
             <div style={{ color: 'var(--color-gold)', fontWeight: 700 }}>₹{product.price}</div>
           </div>
         </div>
-        <button onClick={addToCartHandler} className="btn btn-primary" style={{ padding: '0.8rem 2rem' }}>
-          ADD TO CART
-        </button>
+        <div style={{ display: 'flex', gap: '1rem' }}>
+            <button onClick={() => addToCartHandler(false)} className="btn btn-outline" style={{ padding: '0.8rem 2rem' }}>
+                CART
+            </button>
+            <button onClick={() => addToCartHandler(true)} className="btn btn-primary" style={{ padding: '0.8rem 2rem' }}>
+                BUY NOW
+            </button>
+        </div>
       </div>
 
       <div className="container" style={{ padding: '4rem 2rem 8rem 2rem' }}>
@@ -322,14 +409,15 @@ export default function ProductPage() {
             <div className="thumbnail-strip" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {product.images.map((img, idx) => (
                 <div 
-                  key={img.id} 
+                  key={img.id || idx} 
                   style={{ position: 'relative' }}
                 >
                   <div 
                     onClick={() => { setActiveImage(img.url); setLightboxIndex(idx); }}
+                    className={`thumb-box ${activeImage === img.url ? 'active' : ''}`}
                     style={{ 
                       width: '70px', height: '90px', cursor: 'pointer', overflow: 'hidden', 
-                      border: activeImage === img.url ? '1px solid var(--color-primary)' : '1px solid transparent',
+                      border: activeImage === img.url ? '1px solid var(--color-gold)' : '1px solid var(--color-border)',
                       opacity: activeImage === img.url ? 1 : 0.6,
                       transition: 'var(--transition-fast)'
                     }}
@@ -364,6 +452,7 @@ export default function ProductPage() {
 
             {/* Main Image with Zoom */}
             <div 
+              className="main-image-container"
               style={{ flex: 1, position: 'relative', overflow: 'hidden', backgroundColor: 'var(--color-secondary)', cursor: 'zoom-in', aspectRatio: '3.5/5' }}
               onMouseMove={isEditMode ? null : handleMouseMove}
               onMouseLeave={handleMouseLeave}
@@ -374,7 +463,7 @@ export default function ProductPage() {
                     <Loader className="animate-spin" size={32} />
                  </div>
               ) : null}
-              <img src={activeImage} alt={product.name} className="fade-in" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <img src={activeImage} alt={product.name} className="fade-in main-product-img" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               
               {/* Zoom Overlay */}
               {!isEditMode && (
@@ -399,8 +488,8 @@ export default function ProductPage() {
           </div>
 
           {/* RIGHT: PRODUCT DETAILS */}
-          <div className="fade-in" ref={detailsRef}>
-            <div style={{ fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.2em', color: 'var(--color-text-light)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+          <div className="fade-in product-details-col" ref={detailsRef}>
+            <div style={{ fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.2em', color: 'var(--color-gold)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
               {product.brand}
             </div>
 
@@ -412,9 +501,19 @@ export default function ProductPage() {
                 style={{ fontSize: '2rem', fontWeight: 600, width: '100%', marginBottom: '1rem' }}
               />
             ) : (
-              <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '2.5rem', fontWeight: 600, marginBottom: '1rem', lineHeight: 1.2 }}>
-                {product.name}
-              </h1>
+              <div style={{ marginBottom: '1rem' }}>
+                <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '2.5rem', fontWeight: 600, marginBottom: '0.5rem', lineHeight: 1.2 }}>
+                    {product.name}
+                </h1>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', gap: '2px', color: 'var(--color-gold)' }}>
+                        {[...Array(5)].map((_, i) => (
+                            <Star key={i} size={14} fill={i < Math.round(product.rating || 0) ? "currentColor" : "none"} />
+                        ))}
+                    </div>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--color-text-light)' }}>({product.numReviews || 0} reviews)</span>
+                </div>
+              </div>
             )}
             
             {/* Price & Discount */}
@@ -431,11 +530,18 @@ export default function ProductPage() {
                    />
                 </div>
               ) : (
-                <div style={{ fontSize: '1.8rem', fontWeight: 700 }}>₹{product.price}</div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '1rem' }}>
+                    <div style={{ fontSize: '1.8rem', fontWeight: 700 }}>₹{product.price}</div>
+                    {product.is_archive_sale && (
+                        <div style={{ fontSize: '1.2rem', color: '#999', textDecoration: 'line-through' }}>₹{product.originalPrice}</div>
+                    )}
+                </div>
               )}
-              <div style={{ color: 'var(--color-discount)', fontWeight: 600, fontSize: '0.9rem', letterSpacing: '0.05em' }}>
-                Use code <span style={{ textDecoration: 'underline', cursor: 'pointer' }}>AMOSHI</span> for 5% off
-              </div>
+              {product.is_archive_sale && !isEditMode && (
+                  <div style={{ color: 'var(--color-discount)', fontWeight: 800, fontSize: '0.9rem', letterSpacing: '0.05em' }}>
+                    -{product.discount}% OFF
+                  </div>
+              )}
             </div>
 
             {isEditMode ? (
@@ -464,7 +570,7 @@ export default function ProductPage() {
             {/* Size Selection */}
             <div style={{ marginBottom: '2.5rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                 <span style={{ fontWeight: 600, textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: '0.1em' }}>Size</span>
+                 <span style={{ fontWeight: 600, textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: '0.1em' }}>Select Size</span>
                  <button 
                   onClick={() => setIsSizeChartOpen(true)}
                   style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--color-text-light)', fontSize: '0.8rem', textDecoration: 'underline' }}>
@@ -472,28 +578,35 @@ export default function ProductPage() {
                  </button>
               </div>
               <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                 {product.sizes.map(size => (
+                 {product.sizes.map(s => (
                    <button 
-                    key={size} 
-                    onClick={() => setSelectedSize(size)}
-                    disabled={size === 'XS'} // Mock out of stock
+                    key={s.id} 
+                    onClick={() => s.stock > 0 && setSelectedSize(s.size)}
+                    disabled={s.stock === 0}
+                    className={selectedSize === s.size ? 'size-btn-active' : 'size-btn-inactive'}
                     style={{ 
                       width: '4rem', height: '3.5rem', 
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      border: selectedSize === size ? '2px solid var(--color-primary)' : '1px solid var(--color-border)', 
-                      backgroundColor: size === 'XS' ? '#f9f9f9' : (selectedSize === size ? 'var(--color-primary)' : 'transparent'),
-                      color: size === 'XS' ? '#ccc' : (selectedSize === size ? 'white' : 'var(--color-text)'),
-                      fontWeight: 600,
+                      border: selectedSize === s.size ? '2px solid var(--color-primary)' : '1px solid var(--color-border)', 
+                      backgroundColor: s.stock === 0 ? 'rgba(0,0,0,0.03)' : (selectedSize === s.size ? 'var(--color-primary)' : 'transparent'),
+                      color: s.stock === 0 ? '#bbb' : (selectedSize === s.size ? 'var(--color-bg)' : 'var(--color-text)'),
+                      fontWeight: 800,
                       transition: 'var(--transition-fast)',
-                      cursor: size === 'XS' ? 'not-allowed' : 'pointer'
+                      cursor: s.stock === 0 ? 'not-allowed' : 'pointer',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      fontSize: '1rem'
                     }}>
-                     {size}
+                     {s.size}
+                     {s.stock === 0 && (
+                        <div style={{ position: 'absolute', width: '140%', height: '1px', background: '#ccc', transform: 'rotate(-45deg)' }} />
+                     )}
                    </button>
                  ))}
               </div>
-              {product.stockLeft <= 5 && (
-                <div style={{ marginTop: '1rem', color: 'var(--color-discount)', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Info size={14} /> Only {product.stockLeft} left in stock - order soon
+              {selectedSize && product.sizes.find(s => s.size === selectedSize)?.stock <= 5 && product.sizes.find(s => s.size === selectedSize)?.stock > 0 && (
+                <div style={{ marginTop: '1rem', color: '#c0392b', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Info size={14} /> Only {product.sizes.find(s => s.size === selectedSize)?.stock} left in stock - order soon
                 </div>
               )}
             </div>
@@ -508,38 +621,34 @@ export default function ProductPage() {
               </div>
             </div>
 
+            {/* Main CTA */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '2.5rem' }}>
+                <button 
+                  onClick={() => addToCartHandler(false)} 
+                  className="btn btn-outline" 
+                  style={{ padding: '1.25rem', fontSize: '0.9rem', letterSpacing: '0.15em' }}
+                >
+                  ADD TO CART
+                </button>
+                <button 
+                  onClick={() => addToCartHandler(true)} 
+                  className="btn btn-primary" 
+                  style={{ padding: '1.25rem', fontSize: '0.9rem', letterSpacing: '0.15em' }}
+                >
+                  BUY NOW
+                </button>
+            </div>
+
             {/* Offers Box */}
             <div className="dashed-box" style={{ marginBottom: '2.5rem' }}>
               <div style={{ fontWeight: 700, fontSize: '0.85rem', marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Exclusive Offers</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <div style={{ fontSize: '0.9rem' }}><span className="offer-tag">Flat ₹500 Off</span> above ₹8,500</div>
-                <div style={{ fontSize: '0.9rem' }}><span className="offer-tag">Flat ₹1500 Off</span> above ₹15,000</div>
-                <div style={{ fontSize: '0.9rem' }}><span className="offer-tag">Flat ₹3000 Off</span> above ₹20,000</div>
-                <div style={{ marginTop: '0.5rem', display: 'flex', gap: '1.5rem', fontSize: '0.8rem', color: 'var(--color-text-light)' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><Truck size={14}/> COD Available</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><RotateCcw size={14}/> Free Returns</span>
+                <div style={{ fontSize: '0.8rem', color: 'var(--color-text-light)', display: 'flex', flexWrap: 'wrap', gap: '1.5rem', marginTop: '1rem' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}><Truck size={14} color="var(--color-gold)"/> Free Shipping</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}><ShieldCheck size={14} color="var(--color-gold)"/> Authentic Only</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}><RotateCcw size={14} color="var(--color-gold)"/> 7-Day Returns</span>
                 </div>
-              </div>
-            </div>
-
-            {/* Main CTA */}
-            <button 
-              onClick={addToCartHandler} 
-              className="btn btn-primary btn-block" 
-              style={{ padding: '1.25rem', fontSize: '1rem', marginBottom: '1.5rem', letterSpacing: '0.2em' }}
-            >
-              ADD TO CART
-            </button>
-
-            {/* Trust Badges */}
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem', color: 'var(--color-text-light)', borderTop: '1px solid var(--color-border)', paddingTop: '2rem' }}>
-              <div style={{ textAlign: 'center' }}>
-                <ShieldCheck size={24} style={{ margin: '0 auto 0.5rem', color: 'var(--color-gold)' }} />
-                <div style={{ fontSize: '0.65rem', fontWeight: 600, textTransform: 'uppercase' }}>Secure Checkout</div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <RotateCcw size={24} style={{ margin: '0 auto 0.5rem', color: 'var(--color-gold)' }} />
-                <div style={{ fontSize: '0.65rem', fontWeight: 600, textTransform: 'uppercase' }}>Easy Returns</div>
               </div>
             </div>
 
@@ -551,42 +660,85 @@ export default function ProductPage() {
             <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
                 <span className="subtitle">Real Experiences</span>
                 <h2 className="title" style={{ marginTop: '1rem' }}>Product Reviews</h2>
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '0.2rem', color: 'var(--color-gold)', marginTop: '0.5rem' }}>
-                    <Star size={18} fill="currentColor" /><Star size={18} fill="currentColor" /><Star size={18} fill="currentColor" /><Star size={18} fill="currentColor" /><Star size={18} fill="currentColor" />
-                    <span style={{ marginLeft: '1rem', color: 'var(--color-text)', fontWeight: 600 }}>4.9/5 (128 reviews)</span>
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', marginTop: '0.5rem' }}>
+                    <div style={{ display: 'flex', gap: '2px', color: 'var(--color-gold)' }}>
+                        {[...Array(5)].map((_, i) => (
+                            <Star key={i} size={18} fill={i < Math.round(product.rating || 0) ? "currentColor" : "none"} />
+                        ))}
+                    </div>
+                    <span style={{ color: 'var(--color-text)', fontWeight: 700, fontSize: '1.2rem' }}>
+                        {product.rating?.toFixed(1) || '0.0'}
+                    </span>
+                    <span style={{ color: 'var(--color-text-light)', fontSize: '0.9rem' }}>
+                        ({product.numReviews || 0} reviews)
+                    </span>
                 </div>
             </div>
 
-            <div className="grid grid-cols-2" style={{ gap: '3rem' }}>
-                <div className="dashed-box" style={{ background: 'white' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-                        <div style={{ display: 'flex', gap: '0.1rem', color: 'var(--color-gold)' }}>
-                            <Star size={14} fill="currentColor" /><Star size={14} fill="currentColor" /><Star size={14} fill="currentColor" /><Star size={14} fill="currentColor" /><Star size={14} fill="currentColor" />
+            {/* Add Review Form */}
+            {userInfo && (
+                <div className="dashed-box" style={{ maxWidth: '800px', margin: '0 auto 4rem auto', backgroundColor: 'var(--color-secondary)' }}>
+                    <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1.5rem', textTransform: 'uppercase' }}>Write a Review</h3>
+                    <form onSubmit={submitReviewHandler}>
+                        <div className="form-group">
+                            <label className="form-label">Rating</label>
+                            <select 
+                                value={reviewData.rating}
+                                onChange={e => setReviewData({ ...reviewData, rating: e.target.value })}
+                                className="form-input"
+                            >
+                                <option value="5">5 - Excellent</option>
+                                <option value="4">4 - Very Good</option>
+                                <option value="3">3 - Good</option>
+                                <option value="2">2 - Fair</option>
+                                <option value="1">1 - Poor</option>
+                            </select>
                         </div>
-                        <span style={{ fontSize: '0.8rem', color: 'var(--color-text-light)' }}>Verified Buyer</span>
-                    </div>
-                    {/* Customer Photo */}
-                    <div style={{ width: '100px', height: '140px', overflow: 'hidden', marginBottom: '1.5rem', borderRadius: '4px' }}>
-                        <img src="/images/redesign/customer_1.png" alt="Customer Wearing Dress" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    </div>
-                    <p style={{ fontStyle: 'italic', marginBottom: '1.5rem', lineHeight: 1.6 }}>
-                        "Absolutely stunning fit. The quality of the silk is exceptional and it feels extremely premium. The cherry red is even more vibrant in person."
-                    </p>
-                    <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>Sarah M.</div>
-                </div>
-                
-                <div className="dashed-box" style={{ background: 'white' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-                        <div style={{ display: 'flex', gap: '0.1rem', color: 'var(--color-gold)' }}>
-                            <Star size={14} fill="currentColor" /><Star size={14} fill="currentColor" /><Star size={14} fill="currentColor" /><Star size={14} fill="currentColor" /><Star size={14} fill="currentColor" />
+                        <div className="form-group">
+                            <label className="form-label">Comment</label>
+                            <textarea 
+                                value={reviewData.comment}
+                                onChange={e => setReviewData({ ...reviewData, comment: e.target.value })}
+                                className="form-input"
+                                rows="4"
+                                placeholder="Share your experience with this product..."
+                            />
                         </div>
-                        <span style={{ fontSize: '0.8rem', color: 'var(--color-text-light)' }}>Verified Buyer</span>
-                    </div>
-                    <p style={{ fontStyle: 'italic', marginBottom: '1.5rem', lineHeight: 1.6 }}>
-                        "I was worried about the length but it's perfect (I'm 5'6). The fabric has a beautiful weight to it. Definitely worth the price!"
-                    </p>
-                    <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>Ananya K.</div>
+                        <button type="submit" className="btn btn-gold" disabled={submittingReview}>
+                            {submittingReview ? 'Submitting...' : 'Post Review'}
+                        </button>
+                    </form>
                 </div>
+            )}
+
+            <div className="grid grid-cols-2" style={{ gap: '2rem' }}>
+                {product.reviews && product.reviews.length > 0 ? (
+                    product.reviews.map(review => (
+                        <div key={review.id} className="dashed-box" style={{ background: 'var(--color-secondary)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                                <div style={{ display: 'flex', gap: '2px', color: 'var(--color-gold)' }}>
+                                    {[...Array(5)].map((_, i) => (
+                                        <Star key={i} size={14} fill={i < review.rating ? "currentColor" : "none"} />
+                                    ))}
+                                </div>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--color-text-light)' }}>
+                                    {new Date(review.created_at).toLocaleDateString()}
+                                </span>
+                            </div>
+                            <p style={{ fontStyle: 'italic', marginBottom: '1rem', lineHeight: 1.6, color: 'var(--color-text)' }}>
+                                "{review.comment}"
+                            </p>
+                            <div style={{ fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                {review.user_name}
+                                <ShieldCheck size={14} color="#2ecc71" />
+                            </div>
+                        </div>
+                    ))
+                ) : (
+                    <div style={{ gridColumn: 'span 2', textAlign: 'center', padding: '4rem', color: 'var(--color-text-light)' }}>
+                        No reviews yet. Be the first to share your thoughts!
+                    </div>
+                )}
             </div>
         </div>
 

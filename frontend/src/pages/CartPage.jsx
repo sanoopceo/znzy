@@ -50,7 +50,7 @@ export default function CartPage() {
                     </div>
                   </div>
                   <div style={{ fontSize: '1.2rem', fontWeight: 600 }}>
-                     ${(item.price * item.qty).toFixed(2)}
+                     ₹{(item.price * item.qty).toFixed(2)}
                   </div>
                 </div>
               ))}
@@ -62,7 +62,7 @@ export default function CartPage() {
               <h2 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '2rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '1rem' }}>Order Summary</h2>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
                 <span>Subtotal ({cartItems.reduce((a, c) => a + c.qty, 0)} items)</span>
-                <span>${cartItems.reduce((a, c) => a + c.price * c.qty, 0).toFixed(2)}</span>
+                <span>₹{cartItems.reduce((a, c) => a + c.price * c.qty, 0).toFixed(2)}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem' }}>
                 <span>Shipping</span>
@@ -70,7 +70,7 @@ export default function CartPage() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem', fontSize: '1.3rem', fontWeight: 600, borderTop: '1px solid var(--color-border)', paddingTop: '1rem' }}>
                 <span>Total</span>
-                <span>${cartItems.reduce((a, c) => a + c.price * c.qty, 0).toFixed(2)}</span>
+                <span>₹{cartItems.reduce((a, c) => a + c.price * c.qty, 0).toFixed(2)}</span>
               </div>
               <button onClick={checkoutHandler} disabled={cartItems.length === 0} className="btn btn-primary" style={{ width: '100%', padding: '1.2rem' }}>
                 Proceed to Checkout

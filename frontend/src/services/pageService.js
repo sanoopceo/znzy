@@ -5,6 +5,10 @@ const authConfig = (token) => ({
 });
 
 const pageService = {
+  getPageById: async (pageId, token) => {
+    const { data } = await axios.get(`/api/pages/${pageId}/`, authConfig(token));
+    return data;
+  },
   getPublicPageBySlug: async (slug, token) => {
     const { data } = await axios.get(`/api/pages/${slug}/`, authConfig(token));
     return data;

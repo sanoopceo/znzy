@@ -1,13 +1,31 @@
-import { createContext, useReducer, useEffect } from 'react';
-import axios from 'axios';
-import { jwtDecode } from "jwt-decode";
+import * as React from 'react';
 
-export const StoreContext = createContext();
+export const StoreContext = React.createContext();
 
 const initialState = {
-  userInfo: localStorage.getItem('userInfo') ? JSON.parse(localStorage.getItem('userInfo')) : null,
-  cartItems: localStorage.getItem('cartItems') ? JSON.parse(localStorage.getItem('cartItems')) : [],
-  shippingAddress: localStorage.getItem('shippingAddress') ? JSON.parse(localStorage.getItem('shippingAddress')) : {},
+  userInfo: localStorage.getItem('userInfo') ? (() => {
+    try {
+      const u = JSON.parse(localStorage.getItem('userInfo'));
+      return u && u.token ? u : null; // Validation
+    } catch (e) {
+      return null;
+    }
+  })() : null,
+  cartItems: localStorage.getItem('cartItems') ? (() => {
+    try {
+      const items = JSON.parse(localStorage.getItem('cartItems'));
+      return Array.isArray(items) ? items : [];
+    } catch (e) {
+      return [];
+    }
+  })() : [],
+  shippingAddress: localStorage.getItem('shippingAddress') ? (() => {
+    try {
+      return JSON.parse(localStorage.getItem('shippingAddress'));
+    } catch (e) {
+      return {};
+    }
+  })() : {},
   theme: localStorage.getItem('theme') || 'light'
 };
 
@@ -46,22 +64,27 @@ function reducer(state, action) {
   }
 }
 
-export function StoreProvider(props) {
-  const [state, dispatch] = useReducer(reducer, initialState);
+export const StoreProvider = ({ children }) => {
+  const [state, dispatch] = React.useReducer(reducer, initialState);
 
-  useEffect(() => {
+  React.useEffect(() => {
     document.documentElement.setAttribute('data-theme', state.theme);
     localStorage.setItem('theme', state.theme);
   }, [state.theme]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     localStorage.setItem('cartItems', JSON.stringify(state.cartItems));
   }, [state.cartItems]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     localStorage.setItem('userInfo', JSON.stringify(state.userInfo));
   }, [state.userInfo]);
 
   const value = { state, dispatch };
-  return <StoreContext.Provider value={value}>{props.children}</StoreContext.Provider>;
-}
+
+  return (
+    <StoreContext.Provider value={value}>
+      {children}
+    </StoreContext.Provider>
+  );
+};

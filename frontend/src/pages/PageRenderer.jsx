@@ -8,8 +8,14 @@ function resolvePlaceholders(input, context = {}) {
   });
 }
 
-export default function PageRenderer({ html = '', context = {} }) {
+export default function PageRenderer({ html = '', css = '', context = {} }) {
   const resolved = resolvePlaceholders(html, context);
   const sanitized = DOMPurify.sanitize(resolved);
-  return <div dangerouslySetInnerHTML={{ __html: sanitized }} />;
+  const safeCss = typeof css === 'string' ? css : '';
+  return (
+    <>
+      {safeCss && <style>{safeCss}</style>}
+      <div dangerouslySetInnerHTML={{ __html: sanitized }} />
+    </>
+  );
 }
