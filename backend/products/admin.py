@@ -1,8 +1,14 @@
 from django.contrib import admin
-from .models import Product, ProductImage, ProductVariant, Category, Review
+from .models import Product, ProductImage, ProductSize, Category, Review
 
-admin.site.register(Product)
-admin.site.register(ProductImage)
-admin.site.register(ProductVariant)
-admin.site.register(Category)
-admin.site.register(Review)
+def safe_register(model):
+    try:
+        admin.site.register(model)
+    except admin.sites.AlreadyRegistered:
+        pass
+
+safe_register(Category)
+safe_register(Product)
+safe_register(ProductImage)
+safe_register(ProductSize)
+safe_register(Review)

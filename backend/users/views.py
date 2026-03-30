@@ -66,8 +66,37 @@ def userAddresses(request):
         addresses = Address.objects.filter(user=request.user)
         serializer = AddressSerializer(addresses, many=True)
         return Response(serializer.data)
+    
     elif request.method == 'POST':
         data = request.data
+        
+        # Normalize data for deduplication check
+        def normalize(val):
+            return str(val).strip().lower() if val else ""
+
+        recipient_name = normalize(data.get('recipient_name', ''))
+        street = normalize(data.get('street', ''))
+        city = normalize(data.get('city', ''))
+        state = normalize(data.get('state', ''))
+        postal_code = normalize(data.get('postal_code', ''))
+        phone_number = normalize(data.get('phone_number', ''))
+
+        # Check for existing identical address for this user
+        existing_address = Address.objects.filter(
+            user=request.user,
+            recipient_name__iexact=recipient_name,
+            street__iexact=street,
+            city__iexact=city,
+            state__iexact=state,
+            postal_code__iexact=postal_code,
+            phone_number__iexact=phone_number
+        ).first()
+
+        if existing_address:
+            serializer = AddressSerializer(existing_address, many=False)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        # Create new if not found
         address = Address.objects.create(
             user=request.user,
             name=data.get('name', 'Home'),
@@ -76,11 +105,29 @@ def userAddresses(request):
             city=data.get('city', ''),
             state=data.get('state', ''),
             postal_code=data.get('postal_code', ''),
-            country=data.get('country', ''),
+            country=data.get('country', 'India'),
             phone_number=data.get('phone_number', '')
         )
         serializer = AddressSerializer(address, many=False)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def updateAddress(request, pk):
+    try:
+        address = Address.objects.get(id=pk, user=request.user)
+        data = request.data
+        address.recipient_name = data.get('recipient_name', address.recipient_name)
+        address.street = data.get('street', address.street)
+        address.city = data.get('city', address.city)
+        address.state = data.get('state', address.state)
+        address.postal_code = data.get('postal_code', address.postal_code)
+        address.phone_number = data.get('phone_number', address.phone_number)
+        address.save()
+        serializer = AddressSerializer(address, many=False)
         return Response(serializer.data)
+    except:
+        return Response({'detail': 'Address not found'}, status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
